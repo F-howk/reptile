@@ -6,7 +6,7 @@ const officegen = require('officegen')
 
 let host = 'www.liepin.com';
 let page = 11;
-let c_page = page - 1
+let c_page = 0
 let searchName = [
     '人力资源负责人',
     '培训经理',
@@ -45,16 +45,27 @@ let searchName = [
     '工厂SHE负责人',
 ];
 
+let UA = [
+    'Mozilla/5.0 (Windows; U; Windows NT 6.1; en-us) AppleWebKit/534.50 (KHTML, like Gecko) Version/5.1 Safari/534.50',
+    'Mozilla/5.0 (Windows NT 6.1; rv:2.0.1) Gecko/20100101 Firefox/4.0.1',
+    'Opera/9.80 (Windows NT 6.1; U; en) Presto/2.8.131 Version/11.11',
+    'Mozilla/5.0 (Windows; U; Windows NT 6.1; en-us) AppleWebKit/534.50 (KHTML, like Gecko) Version/5.1 Safari/534.50',
+    'Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1; 360SE)',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36'
+]
+let CUA = () => UA[Math.round(Math.random() * (UA.length - 1))];
+
 for(let s_name = 0; s_name < searchName.length;s_name++){
     for(let i = c_page; i < page; i++){
-        let paths = `/zhaopin/?headId=cbe2b4d5a877dbfd7088a265e2365ee7&ckId=cbe2b4d5a877dbfd7088a265e2365ee7&key=${encodeURI(searchName[s_name])}&industry=5$190&jobKind=2&currentPage=${page}`;
+        let paths = `/zhaopin/?headId=cbe2b4d5a877dbfd7088a265e2365ee7&ckId=cbe2b4d5a877dbfd7088a265e2365ee7&key=${encodeURI(searchName[s_name])}&industry=5$190&jobKind=2&currentPage=${i}`;
         let options = {
             hostname: host,
             port: 443,
             path: paths,
             headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.45 Safari/537.36'
-            }
+                'User-Agent': CUA()
+            },
+            timeout: 1000
         }
         // 请求目标网址的数据
         http.get(options, response => { // 数据流
@@ -72,18 +83,21 @@ for(let s_name = 0; s_name < searchName.length;s_name++){
                     let item = $(v).find('.job-title-box>.ellipsis-1').text();
                     let items = $(v).find('.job-title-box .job-dq-box .ellipsis-1').text();
                     let salary = $(v).find('.job-salary').text();
-                    let tag = $(v).find('.job-labels-box .labels-tag').text();
+                    let tag = $(v).find('.job-labels-box .labels-tag');
                     let company = $(v).find('.company-name').text();
-                    let tags = $(v).find('.company-tags-box span').text();
+                    let tags = $(v).find('.company-tags-box span');
                     let a = $(v).find('.job-detail-box>a')[0].attribs.href;
-                    let detail_path = a.replace('https://' + host,'');
+                    let detail_path = a.replace('https://' + host, '');
+                    let tag_value = $(tag[0]).text() + '\t' + $(tag[1]).text()
+                    let tags_value = $(tags[0]).text() + '\t' + $(tags[tags.length - 1]).text()
                     http.get({
                         hostname: host,
                         port: 443,
                         path: detail_path,
                         headers: {
-                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.45 Safari/537.36'
-                        }
+                            'User-Agent': CUA()
+                        },
+                        timeout: 1000
                     }, response => { // 数据流
                         console.log('[---detailStatusCode---]', response.statusCode)
                         let detail_rst = "";
@@ -97,7 +111,7 @@ for(let s_name = 0; s_name < searchName.length;s_name++){
                             let str = ''
                             let $ = cheerio.load(detail_rst)
                             let detail = $('.job-intro-container dd').text().replace(/\n/g,'').replace(/\t/g,'')
-                            str += company + '\t' + item + '\t' + items + '\t' + salary + '\t' + tag + '\t' + tags + '\t' + detail + '\t' + a + '\n';
+                            str += company + '\t' + item + '\t' + items + '\t' + salary + '\t' + tag_value + '\t' + tags_value + '\t' + detail + '\t' + a + '\n';
                             fs.appendFile('./txt.txt', str, () => {})
                         })
                     })
