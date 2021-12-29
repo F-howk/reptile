@@ -3,7 +3,7 @@ const fs = require("fs");
 const cheerio = require("cheerio");
 
 let host = 'www.liepin.com';
-let page = 10;
+let page = 11;
 let c_page = 0
 let searchName = [
     '人力资源负责人',
@@ -97,8 +97,13 @@ function getInfo(url, type, num = 3) {
                         })
                     })
                 }).on('error', err => {
-                    fs.appendFile('./liepinerr.txt', '[--error--]:' + JSON.stringify(err) + '\n', () => {})
-                    getInfo(url, type, num - 1).catch(() => {})
+                    getInfo(url, type, num - 1)
+                        .then(res => {
+                            resolve(result)
+                        }).catch(() => {
+                            fs.appendFile('./liepinerr.txt', `[--error--]: ==>${url}-${type}-${num - 1}` + JSON.stringify(err) + '\n', () => {})
+                            reject('err')
+                        })
                 })
             } else {
                 http.get(options, res => { // 数据流
@@ -111,14 +116,17 @@ function getInfo(url, type, num = 3) {
 
                     // 监听end事件
                     res.on('end', () => {
-                        let str = ''
                         let $ = cheerio.load(detail_rst)
                         let detail = $('.job-intro-container dd').text().replace(/\n/g, '').replace(/\t/g, '')
                         resolve(detail)
                     })
                 }).on('error', err => {
-                    fs.appendFile('./liepinerr.txt', '[--error--]:' + JSON.stringify(err) + '\n', () => {})
-                    getInfo(url, type, num - 1).catch(() => {})
+                    getInfo(url, type, num - 1).then(res => {
+                        resolve(res)
+                    }).catch(() => {
+                        fs.appendFile('./liepinerr.txt', `[--error--]: ==>${url}-${type}-${num - 1}` + JSON.stringify(err) + '\n', () => {})
+                        reject('err')
+                    })
                 })
             }
         }, ((Math.random() * 2) + 1) * 1000)
